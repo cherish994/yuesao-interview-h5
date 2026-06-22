@@ -20,12 +20,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: yarn
+          node-version: 24
 
-      - run: yarn config set registry https://registry.npmjs.org && yarn install --frozen-lockfile
+      - run: npm config set registry https://registry.npmjs.org && npm install
 
-      - run: yarn build
+      - run: npm run build
         env:
           VITE_DEEPSEEK_API_KEY: ${{ secrets.VITE_DEEPSEEK_API_KEY }}
 

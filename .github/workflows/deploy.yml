@@ -21,10 +21,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: yarn
 
-      - run: npm install --legacy-peer-deps
+      - run: yarn install --frozen-lockfile
 
-      - run: npm run build
+      - run: yarn build
         env:
           VITE_DEEPSEEK_API_KEY: ${{ secrets.VITE_DEEPSEEK_API_KEY }}
 

@@ -23,7 +23,7 @@ jobs:
           node-version: 20
           cache: yarn
 
-      - run: yarn install --frozen-lockfile
+      - run: yarn config set registry https://registry.npmjs.org && yarn install --frozen-lockfile
 
       - run: yarn build
         env:

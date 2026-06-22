@@ -2,7 +2,8 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { questions } from './data/questionBank';
 import { evaluateAnswer, generateReport } from './services/aiService';
 import { startListening, stopListening, isSupported } from './services/speechService';
-import { loadSessions as dbLoad, saveSession as dbSave } from './services/supabaseService';
+import { loadSessions as dbLoad, saveSession as dbSave, getCurrentUser, logout, supabase } from './services/supabaseService';
+import Auth from './components/Auth';
 import Waveform from './components/Waveform';
 import type {
   CandidateProfile, AnswerRecord, AIEvaluation,
@@ -28,10 +29,26 @@ export default function App() {
   const [sessions, setSessions] = useState<InterviewSession[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [session, setSession] = useState<InterviewSession | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null); // null = 检查中
+  const [userPhone, setUserPhone] = useState('');
 
   useEffect(() => {
-    dbLoad().then(data => { setSessions(data); setSessionsLoading(false); });
+    getCurrentUser().then(user => {
+      setIsLoggedIn(!!user);
+      if (user?.phone) setUserPhone(user.phone);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_, sess) => {
+      setIsLoggedIn(!!sess);
+      if (sess?.user?.phone) setUserPhone(sess.user.phone);
+    });
+    return () => listener.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      dbLoad().then(data => { setSessions(data); setSessionsLoading(false); });
+    }
+  }, [isLoggedIn]);
   const [qIdx, setQIdx] = useState(0);
   const [answers, setAnswers] = useState<AnswerRecord[]>([]);
   const [phase, setPhase] = useState<Phase>('idle');
@@ -172,11 +189,31 @@ export default function App() {
     } finally { setLoading(false); }
   };
 
+  // 登录状态检查中
+  if (isLoggedIn === null) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F6FF' }}>
+      <div style={{ textAlign: 'center', color: '#888' }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>🤱</div>
+        <p>加载中...</p>
+      </div>
+    </div>
+  );
+
+  // 未登录
+  if (!isLoggedIn) return <Auth onLogin={() => setIsLoggedIn(true)} />;
+
   if (view === 'home') return (
     <div className={styles.screen}>
       <div className={styles.homeTop}>
         <h1 className={styles.appTitle}>月嫂面试助手</h1>
         <p className={styles.appSub}>AI 实时出题 · 追问 · 生成报告</p>
+        <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>{userPhone}</span>
+          <button onClick={() => { logout(); setIsLoggedIn(false); setSessions([]); }}
+            style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', fontSize: 12, borderRadius: 20, padding: '4px 12px', cursor: 'pointer' }}>
+            退出
+          </button>
+        </div>
       </div>
       <button className={styles.startBtn} onClick={() => { setName(''); setYrs(''); setBabies(''); setLongest(''); setErr(''); setView('setup'); }}>
         ＋ 开始新面试

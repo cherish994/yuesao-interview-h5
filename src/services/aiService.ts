@@ -3,7 +3,7 @@ import { questions } from '../data/questionBank';
 
 const API_BASE = 'https://api.deepseek.com/chat/completions';
 const MODEL = 'deepseek-chat';
-const API_KEY = 'sk-3fcfdd423b284828a6bfc5598a303312';
+const API_KEY = import.meta.env.VITE_DEEPSEEK_API_KEY as string;
 
 async function callLLM(system: string, user: string, maxTokens = 1024): Promise<string> {
   const res = await fetch(API_BASE, {

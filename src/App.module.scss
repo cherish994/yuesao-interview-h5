@@ -1,0 +1,431 @@
+// 1rem = 100px (750px 设计稿)
+.screen {
+  width: 7.5rem;
+  min-height: 100vh;
+  background: #F5F6FF;
+  padding-bottom: 1.6rem;
+  box-sizing: border-box;
+}
+
+// ── 首页 ──────────────────────────────────────────────────────────────────
+.homeTop {
+  background: #6B7FD7;
+  padding: 0.6rem 0.32rem 0.4rem;
+  text-align: center;
+}
+.appTitle {
+  font-size: 0.44rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 0.08rem;
+}
+.appSub {
+  font-size: 0.24rem;
+  color: rgba(255,255,255,0.8);
+}
+.startBtn {
+  display: block;
+  width: 6.86rem;
+  margin: 0.32rem auto 0;
+  background: #6B7FD7;
+  color: #fff;
+  font-size: 0.32rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 0.24rem;
+  padding: 0.28rem 0;
+  box-shadow: 0 0.08rem 0.24rem rgba(107,127,215,0.35);
+  cursor: pointer;
+}
+.secLabel {
+  font-size: 0.24rem;
+  font-weight: 700;
+  color: #888;
+  padding: 0.28rem 0.32rem 0.12rem;
+  letter-spacing: 0.01rem;
+}
+.sessCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  margin: 0 0.24rem 0.16rem;
+  border-radius: 0.24rem;
+  padding: 0.24rem 0.28rem;
+  box-shadow: 0 0.02rem 0.08rem rgba(0,0,0,0.05);
+  cursor: pointer;
+}
+.sessName {
+  font-size: 0.28rem;
+  font-weight: 700;
+  color: #1A1A2E;
+  margin-bottom: 0.06rem;
+}
+.sessMeta {
+  font-size: 0.22rem;
+  color: #999;
+}
+.recoBadge {
+  font-size: 0.22rem;
+  font-weight: 700;
+  padding: 0.06rem 0.16rem;
+  border-radius: 0.28rem;
+  white-space: nowrap;
+}
+.ingBadge {
+  font-size: 0.22rem;
+  color: #6B7FD7;
+  background: #E8E9F5;
+  padding: 0.06rem 0.16rem;
+  border-radius: 0.28rem;
+}
+
+// ── 通用 ──────────────────────────────────────────────────────────────────
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 0.16rem;
+  padding: 0.24rem 0.32rem;
+  font-size: 0.28rem;
+  font-weight: 700;
+  color: #1A1A2E;
+  background: #fff;
+  border-bottom: 0.01rem solid #F0F0F8;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.backBtn {
+  background: none;
+  border: none;
+  font-size: 0.26rem;
+  color: #6B7FD7;
+  cursor: pointer;
+  padding: 0;
+}
+.card {
+  background: #fff;
+  border-radius: 0.24rem;
+  padding: 0.32rem;
+  margin: 0.24rem 0.24rem 0;
+  box-shadow: 0 0.02rem 0.08rem rgba(0,0,0,0.06);
+}
+.errText {
+  color: #E05454;
+  font-size: 0.24rem;
+  margin-top: 0.12rem;
+}
+
+// ── 设置页 ────────────────────────────────────────────────────────────────
+.hint {
+  font-size: 0.24rem;
+  color: #888;
+  margin-bottom: 0.28rem;
+  line-height: 1.5;
+}
+.fLabel {
+  display: block;
+  font-size: 0.24rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.08rem;
+  margin-top: 0.24rem;
+}
+.fInput {
+  display: block;
+  width: 100%;
+  border: 0.02rem solid #E0E1EE;
+  border-radius: 0.16rem;
+  padding: 0.2rem 0.24rem;
+  font-size: 0.28rem;
+  color: #1A1A2E;
+  box-sizing: border-box;
+  outline: none;
+  &:focus { border-color: #6B7FD7; }
+}
+
+// ── 面试页 ────────────────────────────────────────────────────────────────
+.progWrap {
+  height: 0.06rem;
+  background: #E0E1EE;
+  margin: 0.16rem 0.24rem 0;
+  border-radius: 0.04rem;
+}
+.progBar {
+  height: 0.06rem;
+  background: #6B7FD7;
+  border-radius: 0.04rem;
+  transition: width 0.3s;
+}
+.progText {
+  text-align: right;
+  font-size: 0.22rem;
+  color: #aaa;
+  padding: 0.04rem 0.24rem 0;
+}
+.qHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.2rem;
+}
+.catBadge {
+  color: #fff;
+  font-size: 0.2rem;
+  font-weight: 600;
+  padding: 0.06rem 0.16rem;
+  border-radius: 0.28rem;
+}
+.qNum {
+  font-size: 0.22rem;
+  color: #999;
+}
+.fuTag {
+  font-size: 0.2rem;
+  color: #E07B54;
+  font-weight: 700;
+  letter-spacing: 0.02rem;
+  margin-bottom: 0.08rem;
+}
+.qText {
+  font-size: 0.32rem;
+  font-weight: 600;
+  color: #1A1A2E;
+  line-height: 1.6;
+  margin-bottom: 0.24rem;
+}
+.guideBtn {
+  background: none;
+  border: none;
+  font-size: 0.24rem;
+  color: #6B7FD7;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+.guideBox {
+  margin-top: 0.16rem;
+  background: #F7F8FF;
+  border-radius: 0.16rem;
+  padding: 0.2rem;
+  border-left: 0.06rem solid #6B7FD7;
+}
+.guideText {
+  font-size: 0.24rem;
+  line-height: 1.6;
+  color: #444;
+}
+.redFlag {
+  font-size: 0.22rem;
+  color: #E05454;
+  margin-top: 0.06rem;
+}
+.transcriptBox {
+  background: #F9FAFB;
+  border-radius: 0.2rem;
+  margin: 0.2rem 0.24rem 0;
+  padding: 0.24rem;
+  min-height: 1.2rem;
+}
+.txLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
+  font-size: 0.22rem;
+  color: #888;
+  margin-bottom: 0.12rem;
+}
+.dot {
+  width: 0.12rem;
+  height: 0.12rem;
+  border-radius: 50%;
+  display: inline-block;
+}
+.txText {
+  font-size: 0.26rem;
+  color: #1A1A2E;
+  line-height: 1.6;
+}
+.listenBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12rem;
+  width: 6.86rem;
+  margin: 0.24rem auto 0;
+  background: #6B7FD7;
+  color: #fff;
+  font-size: 0.3rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 0.24rem;
+  padding: 0.28rem 0;
+  cursor: pointer;
+  box-shadow: 0 0.06rem 0.2rem rgba(107,127,215,0.3);
+  &.fuBtn { background: #E07B54; box-shadow: 0 0.06rem 0.2rem rgba(224,123,84,0.3); }
+  &.active { background: #E05454; box-shadow: 0 0.06rem 0.2rem rgba(224,84,84,0.3); }
+  &:disabled { opacity: 0.7; }
+}
+.cancelBtn {
+  display: block;
+  margin: 0.12rem auto 0;
+  background: none;
+  border: none;
+  font-size: 0.24rem;
+  color: #888;
+  cursor: pointer;
+}
+.aiCard {
+  background: #fff;
+  border-radius: 0.2rem;
+  margin: 0.2rem 0.24rem 0;
+  padding: 0.28rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  box-shadow: 0 0.02rem 0.08rem rgba(0,0,0,0.06);
+}
+.scoreRow {
+  display: flex;
+  align-items: center;
+  gap: 0.12rem;
+}
+.scoreLabel {
+  font-size: 0.28rem;
+  font-weight: 700;
+  color: #1A1A2E;
+}
+.hlLabel { font-size: 0.22rem; color: #2E9B6E; font-weight: 700; }
+.hlItem { font-size: 0.24rem; color: #2E7D5A; line-height: 1.7; }
+.cnLabel { font-size: 0.22rem; color: #E05454; font-weight: 700; }
+.cnItem { font-size: 0.24rem; color: #C04040; line-height: 1.7; }
+.fuBox {
+  background: rgba(107,127,215,0.08);
+  border-radius: 0.16rem;
+  padding: 0.16rem;
+}
+.fuLabel2 { font-size: 0.22rem; color: #6B7FD7; font-weight: 700; margin-bottom: 0.06rem; }
+.fuText { font-size: 0.26rem; color: #1A1A2E; line-height: 1.5; }
+.aiActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.16rem;
+  margin-top: 0.08rem;
+}
+.fuActionBtn {
+  background: #fff;
+  border: 0.02rem solid #6B7FD7;
+  color: #6B7FD7;
+  font-size: 0.24rem;
+  font-weight: 600;
+  border-radius: 0.32rem;
+  padding: 0.12rem 0.28rem;
+  cursor: pointer;
+}
+.nextBtn {
+  background: #6B7FD7;
+  border: none;
+  color: #fff;
+  font-size: 0.24rem;
+  font-weight: 600;
+  border-radius: 0.32rem;
+  padding: 0.12rem 0.28rem;
+  cursor: pointer;
+}
+.spinner {
+  display: inline-block;
+  width: 0.32rem;
+  height: 0.32rem;
+  border: 0.04rem solid #E0E1EE;
+  border-top-color: #6B7FD7;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 0.1rem;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.bottomNav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 7.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.2rem 0.24rem 0.4rem;
+  background: #fff;
+  border-top: 0.01rem solid #F0F0F8;
+  box-sizing: border-box;
+  gap: 0.12rem;
+}
+.navBtn {
+  flex: 1;
+  background: #F0F1FA;
+  border: none;
+  color: #6B7FD7;
+  font-size: 0.24rem;
+  font-weight: 600;
+  border-radius: 0.16rem;
+  padding: 0.16rem 0;
+  cursor: pointer;
+  &:disabled { opacity: 0.3; }
+}
+.finBtn {
+  flex: 1;
+  background: #6B7FD7;
+  border: none;
+  color: #fff;
+  font-size: 0.24rem;
+  font-weight: 700;
+  border-radius: 0.16rem;
+  padding: 0.16rem 0;
+  cursor: pointer;
+}
+
+// ── 报告页 ────────────────────────────────────────────────────────────────
+.reportScroll {
+  height: calc(100vh - 0.88rem);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.loadWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.2rem 0;
+  gap: 0.2rem;
+  font-size: 0.28rem;
+  color: #555;
+}
+.reportWrap { padding-bottom: 0.8rem; }
+.rName { font-size: 0.4rem; font-weight: 800; color: #1A1A2E; margin-bottom: 0.08rem; }
+.rMeta { font-size: 0.22rem; color: #999; margin-bottom: 0.24rem; }
+.recoBig {
+  display: flex;
+  flex-direction: column;
+  border-radius: 0.2rem;
+  padding: 0.24rem;
+  border: 0.03rem solid;
+  margin-bottom: 0.2rem;
+  gap: 0.06rem;
+}
+.recoReason { font-size: 0.24rem; color: #666; }
+.authLine { font-size: 0.26rem; color: #555; margin-bottom: 0.06rem; }
+.authNote { font-size: 0.22rem; color: #888; line-height: 1.5; }
+.cardTitle { font-size: 0.28rem; font-weight: 700; color: #1A1A2E; margin-bottom: 0.2rem; }
+.summaryText { font-size: 0.26rem; color: #333; line-height: 1.7; }
+.barRow {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.16rem;
+}
+.barLabel { font-size: 0.22rem; color: #555; width: 1.4rem; flex-shrink: 0; }
+.barBg {
+  flex: 1;
+  height: 0.12rem;
+  background: #EDEFFA;
+  border-radius: 0.06rem;
+  margin: 0 0.16rem;
+}
+.barFill { height: 0.12rem; border-radius: 0.06rem; }

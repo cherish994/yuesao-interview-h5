@@ -40,6 +40,10 @@ export default function App() {
   useEffect(() => {
     if (phone) refreshSessions();
   }, [phone]);
+
+  useEffect(() => {
+    if (view !== 'interview') stopListening();
+  }, [view]);
   const [qIdx, setQIdx] = useState(0);
   const [answers, setAnswers] = useState<AnswerRecord[]>([]);
   const [phase, setPhase] = useState<Phase>('idle');
@@ -124,26 +128,25 @@ export default function App() {
     if (ok) setPhase('listening');
   };
 
-  // 后台静默保存当前题目的转录（不停录音，不切换 phase）
-  const autoSaveCurrentAnswer = useCallback(async (qOverride?: typeof q, answersOverride?: AnswerRecord[]) => {
-    const curQ = qOverride || q;
-    const curAnswers = answersOverride || answers;
+  // 后台静默保存当前题目的转录，返回最新 answers
+  const autoSaveCurrentAnswer = useCallback(async (): Promise<AnswerRecord[]> => {
     const text = finalRef.current.trim();
-    if (!text || !session) return;
+    if (!text || !session) return answers;
     const rec: AnswerRecord = {
-      questionId: curQ.id, transcript: text, evaluation: null,
-      followUpTranscripts: curAnswers.find(a => a.questionId === curQ.id)?.followUpTranscripts || [],
+      questionId: q.id, transcript: text, evaluation: null,
+      followUpTranscripts: answers.find(a => a.questionId === q.id)?.followUpTranscripts || [],
       skipped: false,
     };
-    const newAns = [...curAnswers.filter(a => a.questionId !== curQ.id), rec];
+    const newAns = [...answers.filter(a => a.questionId !== q.id), rec];
     setAnswers(newAns);
     saveAndUpdate(session, newAns);
     // 后台评估，不阻塞
-    evaluateAnswer(curQ, text, session.candidate).then(ev => {
-      const updated = newAns.map(a => a.questionId === curQ.id ? { ...a, evaluation: ev } : a);
+    evaluateAnswer(q, text, session.candidate).then(ev => {
+      const updated = newAns.map(a => a.questionId === q.id ? { ...a, evaluation: ev } : a);
       setAnswers(updated);
       saveAndUpdate(session, updated);
     }).catch(() => {});
+    return newAns;
   }, [q, answers, session]);
 
   // 手动停止并立即评估（显示结果卡）
@@ -232,13 +235,14 @@ export default function App() {
   const prevQ = () => switchQuestion(-1);
 
   const finish = async () => {
-    await autoSaveCurrentAnswer();
+    const freshAnswers = await autoSaveCurrentAnswer(); // 先保存最后一题
     stopListening();
     setLoading(true); setView('report'); setReport(null); setErr('');
     try {
-      const r = await generateReport(session!.candidate, answers);
+      const r = await generateReport(session!.candidate, freshAnswers);
       setReport(r);
-      const updated: InterviewSession = { ...session!, finishedAt: new Date().toISOString(), answers, report: r };
+      setAnswers(freshAnswers);
+      const updated: InterviewSession = { ...session!, finishedAt: new Date().toISOString(), answers: freshAnswers, report: r };
       setSession(updated);
       await dbSave(updated);
       refreshSessions();

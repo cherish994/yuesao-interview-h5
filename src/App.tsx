@@ -163,7 +163,13 @@ export default function App() {
     const newAns = [...answers.filter(a => a.questionId !== q.id), rec];
     setAnswers(newAns);
     saveAndUpdate(session!, newAns);
-    nextQ();
+    if (qIdx < questions.length - 1) {
+      setQIdx(i => i + 1);
+      if (phase !== 'listening') setPhase('idle');
+      setTranscript(''); finalRef.current = '';
+      setEvalResult(null); setFollowUp(false); setFollowUpText(null); setGuideOpen(false);
+      clearAutoFollowUp();
+    }
   };
 
   const clearAutoFollowUp = () => {
@@ -174,8 +180,10 @@ export default function App() {
   const nextQ = () => {
     if (qIdx < questions.length - 1) {
       setQIdx(i => i + 1);
-      setPhase('idle'); setTranscript(''); setEvalResult(null);
-      setFollowUp(false); setFollowUpText(null); setGuideOpen(false);
+      // 录音中：保持 listening，只清转录内容
+      if (phase !== 'listening') setPhase('idle');
+      setTranscript(''); finalRef.current = '';
+      setEvalResult(null); setFollowUp(false); setFollowUpText(null); setGuideOpen(false);
       clearAutoFollowUp();
     }
   };
@@ -183,8 +191,9 @@ export default function App() {
   const prevQ = () => {
     if (qIdx > 0) {
       setQIdx(i => i - 1);
-      setPhase('idle'); setTranscript(''); setEvalResult(null);
-      setFollowUp(false); setFollowUpText(null); setGuideOpen(false);
+      if (phase !== 'listening') setPhase('idle');
+      setTranscript(''); finalRef.current = '';
+      setEvalResult(null); setFollowUp(false); setFollowUpText(null); setGuideOpen(false);
       clearAutoFollowUp();
     }
   };

@@ -446,7 +446,7 @@ export default function App() {
                 </div>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: 12, margin: '0 16px 40px' }}>
+            <div style={{ display: 'flex', gap: 12, margin: '0 16px' }}>
               <div style={{ flex: 1, background: '#F0FBF6', borderRadius: 14, padding: 14 }}>
                 <p style={{ fontWeight: 700, color: '#2E9B6E', marginBottom: 8 }}>优势</p>
                 {report.strengths.map((s, i) => <p key={i} style={{ fontSize: 13, color: '#2E7D5A', lineHeight: 1.8 }}>✓ {s}</p>)}
@@ -456,6 +456,35 @@ export default function App() {
                 {report.concerns.map((c, i) => <p key={i} style={{ fontSize: 13, color: '#C04040', lineHeight: 1.8 }}>✗ {c}</p>)}
               </div>
             </div>
+
+            {/* 每题转录详情 */}
+            <div className={styles.card} style={{ marginTop: 14 }}>
+              <p className={styles.cardTitle}>面试原话记录</p>
+              {answers.filter(a => !a.skipped && a.transcript).map((a, i) => {
+                const qs = questions.find(q => q.id === a.questionId);
+                if (!qs) return null;
+                const scoreColor = a.evaluation ? ['', '#E05454', '#D4880A', '#2E9B6E'][a.evaluation.score] : '#aaa';
+                const scoreLabel = a.evaluation ? ['', '较差', '一般', '到位'][a.evaluation.score] : '';
+                return (
+                  <div key={a.questionId} style={{ paddingBottom: 16, marginBottom: 16, borderBottom: i < answers.filter(x => !x.skipped && x.transcript).length - 1 ? '1px solid #F0F1FA' : 'none' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: CAT_COLOR[qs.category], flex: 1 }}>{qs.category}</p>
+                      {scoreLabel && <span style={{ fontSize: 12, color: scoreColor, fontWeight: 700, background: scoreColor + '18', borderRadius: 8, padding: '2px 8px', whiteSpace: 'nowrap' as const }}>{scoreLabel}</span>}
+                    </div>
+                    <p style={{ fontSize: 13, color: '#444', marginBottom: 8, lineHeight: 1.5 }}>Q：{qs.text}</p>
+                    <p style={{ fontSize: 14, color: '#1A1A2E', lineHeight: 1.7, background: '#F9FAFB', borderRadius: 8, padding: '8px 12px' }}>
+                      {a.transcript}
+                    </p>
+                    {a.followUpTranscripts.length > 0 && a.followUpTranscripts.map((ft, fi) => (
+                      <p key={fi} style={{ fontSize: 13, color: '#666', lineHeight: 1.6, background: '#FFF8E6', borderRadius: 8, padding: '6px 12px', marginTop: 6 }}>
+                        追问回答：{ft}
+                      </p>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ height: 40 }} />
           </div>
         )}
       </div>

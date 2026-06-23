@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { questions } from './data/questionBank';
-import { evaluateAnswer, generateReport } from './services/aiService';
+import { evaluateAnswer, generateReport, getRealtimeFollowUp } from './services/aiService';
 import { startListening, stopListening, isSupported } from './services/speechService';
 import { loadSessions as dbLoad, saveSession as dbSave, getStoredPhone, storePhone, clearPhone } from './services/supabaseService';
 import Auth from './components/Auth';
@@ -54,6 +54,8 @@ export default function App() {
   const [longest, setLongest] = useState('');
 
   const finalRef = useRef('');
+  const [autoFollowUp, setAutoFollowUp] = useState<string | null>(null);
+  const followUpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const q = questions[qIdx];
   const answered = answers.filter(a => !a.skipped && a.transcript).length;
 
@@ -94,7 +96,15 @@ export default function App() {
     if (!isSupported()) { setErr('请用 Safari 或 Chrome 打开'); return; }
     const ok = await startListening(
       (text, isFinal) => {
-        if (isFinal) finalRef.current += text;
+        if (isFinal) {
+          finalRef.current += text;
+          // 有新的完整句子，防抖 2 秒后触发追问分析
+          if (followUpTimerRef.current) clearTimeout(followUpTimerRef.current);
+          followUpTimerRef.current = setTimeout(async () => {
+            const hint = await getRealtimeFollowUp(q.text, finalRef.current);
+            setAutoFollowUp(hint);
+          }, 2000);
+        }
         setTranscript((finalRef.current + text).slice(-200));
       },
     );
@@ -145,11 +155,17 @@ export default function App() {
     nextQ();
   };
 
+  const clearAutoFollowUp = () => {
+    setAutoFollowUp(null);
+    if (followUpTimerRef.current) clearTimeout(followUpTimerRef.current);
+  };
+
   const nextQ = () => {
     if (qIdx < questions.length - 1) {
       setQIdx(i => i + 1);
       setPhase('idle'); setTranscript(''); setEvalResult(null);
       setFollowUp(false); setFollowUpText(null); setGuideOpen(false);
+      clearAutoFollowUp();
     }
   };
 
@@ -158,6 +174,7 @@ export default function App() {
       setQIdx(i => i - 1);
       setPhase('idle'); setTranscript(''); setEvalResult(null);
       setFollowUp(false); setFollowUpText(null); setGuideOpen(false);
+      clearAutoFollowUp();
     }
   };
 
@@ -271,6 +288,28 @@ export default function App() {
         <Waveform active={phase === 'listening'} />
         <p className={styles.txText}>{transcript || (phase === 'listening' ? '等待月嫂说话...' : '点击「开始听」后开始转录')}</p>
       </div>
+
+      {/* 实时追问提示 */}
+      {phase === 'listening' && autoFollowUp && (
+        <div style={{
+          margin: '0 16px',
+          padding: '12px 16px',
+          background: '#FFF8E6',
+          borderRadius: 12,
+          borderLeft: '3px solid #F59E0B',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 8,
+        }}>
+          <span style={{ fontSize: 18 }}>💡</span>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 12, color: '#B45309', fontWeight: 700, marginBottom: 3 }}>AI 建议追问</p>
+            <p style={{ fontSize: 15, color: '#1A1A2E', lineHeight: 1.5 }}>{autoFollowUp}</p>
+          </div>
+          <button onClick={clearAutoFollowUp}
+            style={{ background: 'none', border: 'none', color: '#aaa', fontSize: 18, cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
+        </div>
+      )}
 
       {!followUp && phase !== 'result' && (
         <button

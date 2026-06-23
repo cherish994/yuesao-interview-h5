@@ -57,6 +57,32 @@ export async function evaluateAnswer(
   };
 }
 
+// 实时追问：录音过程中分析是否需要追问
+export async function getRealtimeFollowUp(
+  questionText: string,
+  transcript: string,
+): Promise<string | null> {
+  if (transcript.length < 10) return null;
+  const system = `你是月嫂面试助手，帮助面试官在对话中及时追问。只输出JSON，不要其他文字。`;
+  const user = `当前题目：${questionText}
+月嫂回答（可能不完整）：${transcript}
+
+判断：回答是否含糊、不具体、或者有需要深挖的地方？
+- 如果有，给出一个具体的追问（20字以内，直接问月嫂的话，口语化）
+- 如果回答已清晰完整，返回 null
+
+只输出：{"followUp": "追问内容" | null}`;
+  try {
+    const raw = await callLLM(system, user, 80);
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    const p = JSON.parse(match[0]);
+    return p.followUp || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function generateReport(
   candidate: CandidateProfile,
   answers: AnswerRecord[],

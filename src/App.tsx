@@ -60,7 +60,9 @@ export default function App() {
   const finalRef = useRef('');
   const [autoFollowUp, setAutoFollowUp] = useState<string | null>(null);
   const followUpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const qIdxRef = useRef(qIdx); // 用 ref 追踪当前题目，避免闭包问题
   const q = questions[qIdx];
+  qIdxRef.current = qIdx;
   const answered = answers.filter(a => !a.skipped && a.transcript).length;
 
   const resetInterview = () => {
@@ -198,27 +200,36 @@ export default function App() {
     if (followUpTimerRef.current) clearTimeout(followUpTimerRef.current);
   };
 
-  const nextQ = async () => {
-    if (qIdx < questions.length - 1) {
-      await autoSaveCurrentAnswer();
-      setQIdx(i => i + 1);
-      if (phase !== 'listening') setPhase('idle');
-      setTranscript(''); finalRef.current = '';
-      setEvalResult(null); setFollowUp(false); setFollowUpText(null); setGuideOpen(false);
-      clearAutoFollowUp();
+  const switchQuestion = async (direction: 1 | -1) => {
+    const newIdx = qIdx + direction;
+    if (newIdx < 0 || newIdx >= questions.length) return;
+    await autoSaveCurrentAnswer();
+    setQIdx(newIdx);
+    setTranscript(''); finalRef.current = '';
+    setEvalResult(null); setFollowUp(false); setFollowUpText(null); setGuideOpen(false);
+    clearAutoFollowUp();
+    // 切题后始终确保录音运行
+    if (phase === 'listening') {
+      // 已在录：只重置内容，Speech API 持续运行
+    } else {
+      // 未在录：重新开始
+      setPhase('listening');
+      startListening((text, isFinal) => {
+        if (isFinal) {
+          finalRef.current += text;
+          if (followUpTimerRef.current) clearTimeout(followUpTimerRef.current);
+          followUpTimerRef.current = setTimeout(async () => {
+            const hint = await getRealtimeFollowUp(questions[qIdxRef.current].text, finalRef.current);
+            setAutoFollowUp(hint);
+          }, 2000);
+        }
+        setTranscript((finalRef.current + text).slice(-200));
+      });
     }
   };
 
-  const prevQ = async () => {
-    if (qIdx > 0) {
-      await autoSaveCurrentAnswer();
-      setQIdx(i => i - 1);
-      if (phase !== 'listening') setPhase('idle');
-      setTranscript(''); finalRef.current = '';
-      setEvalResult(null); setFollowUp(false); setFollowUpText(null); setGuideOpen(false);
-      clearAutoFollowUp();
-    }
-  };
+  const nextQ = () => switchQuestion(1);
+  const prevQ = () => switchQuestion(-1);
 
   const finish = async () => {
     await autoSaveCurrentAnswer();

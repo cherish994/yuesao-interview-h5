@@ -42,6 +42,11 @@ export async function loadSessions(): Promise<InterviewSession[]> {
   }));
 }
 
+export async function deleteSession(id: string): Promise<void> {
+  const { error } = await supabase.from('sessions').delete().eq('id', id);
+  if (error) console.error('删除失败:', error.message);
+}
+
 export async function saveSession(session: InterviewSession): Promise<void> {
   const phone = getStoredPhone();
   if (!phone) return;

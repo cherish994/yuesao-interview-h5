@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { questions } from './data/questionBank';
 import { evaluateAnswer, generateReport, getRealtimeFollowUp } from './services/aiService';
 import { startListening, stopListening, isSupported } from './services/speechService';
-import { loadSessions as dbLoad, saveSession as dbSave, getStoredPhone, storePhone, clearPhone } from './services/supabaseService';
+import { loadSessions as dbLoad, saveSession as dbSave, deleteSession as dbDelete, getStoredPhone, storePhone, clearPhone } from './services/supabaseService';
 import Auth from './components/Auth';
 import Waveform from './components/Waveform';
 import type {
@@ -27,14 +27,18 @@ type Phase = 'idle' | 'listening' | 'processing' | 'result';
 export default function App() {
   const [view, setView] = useState<View>('home');
   const [sessions, setSessions] = useState<InterviewSession[]>([]);
-  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
   const [session, setSession] = useState<InterviewSession | null>(null);
   const [phone, setPhone] = useState(getStoredPhone);
 
+  const refreshSessions = () => {
+    setSessionsLoading(true);
+    dbLoad().then(data => { setSessions(data); setSessionsLoading(false); })
+            .catch(() => setSessionsLoading(false));
+  };
+
   useEffect(() => {
-    if (phone) {
-      dbLoad().then(data => { setSessions(data); setSessionsLoading(false); });
-    }
+    if (phone) refreshSessions();
   }, [phone]);
   const [qIdx, setQIdx] = useState(0);
   const [answers, setAnswers] = useState<AnswerRecord[]>([]);
@@ -67,7 +71,14 @@ export default function App() {
   const goHome = () => {
     stopListening();
     setView('home');
-    dbLoad().then(setSessions);
+    refreshSessions();
+  };
+
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('删除这条面试记录？')) return;
+    await dbDelete(id);
+    setSessions(prev => prev.filter(s => s.id !== id));
   };
 
   const saveAndUpdate = (sess: InterviewSession, ans: AnswerRecord[]) => {
@@ -186,7 +197,7 @@ export default function App() {
       const updated: InterviewSession = { ...session!, finishedAt: new Date().toISOString(), answers, report: r };
       setSession(updated);
       await dbSave(updated);
-      dbLoad().then(setSessions);
+      refreshSessions();
     } catch (e: any) {
       setErr(e.message || '报告生成失败');
     } finally { setLoading(false); }
@@ -217,7 +228,7 @@ export default function App() {
           <div key={s.id} className={styles.sessCard} onClick={() => {
             if (s.report) { setSession(s); setAnswers(s.answers); setReport(s.report); setView('report'); }
           }}>
-            <div>
+            <div style={{ flex: 1 }}>
               <div className={styles.sessName}>{s.candidate.name}</div>
               <div className={styles.sessMeta}>{new Date(s.startedAt).toLocaleDateString('zh-CN')} · 答{s.answers.filter(a => !a.skipped && a.transcript).length}/{questions.length}题</div>
             </div>
@@ -225,6 +236,10 @@ export default function App() {
               ? <span className={styles.recoBadge} style={{ color: RECO_COLOR[s.report.recommendation], background: RECO_COLOR[s.report.recommendation] + '18' }}>{s.report.recommendation}</span>
               : <span className={styles.ingBadge}>进行中</span>
             }
+            <button onClick={e => handleDelete(s.id, e)}
+              style={{ background: 'none', border: 'none', color: '#ccc', fontSize: 20, cursor: 'pointer', padding: '0 0 0 8px', lineHeight: 1 }}>
+              🗑
+            </button>
           </div>
         ))}
       </>}

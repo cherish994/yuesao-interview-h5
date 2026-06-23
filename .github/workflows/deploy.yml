@@ -27,6 +27,9 @@ jobs:
       - run: npm run build
         env:
           VITE_DEEPSEEK_API_KEY: ${{ secrets.VITE_DEEPSEEK_API_KEY }}
+          VITE_XFYUN_APPID: ${{ secrets.VITE_XFYUN_APPID }}
+          VITE_XFYUN_API_KEY: ${{ secrets.VITE_XFYUN_API_KEY }}
+          VITE_XFYUN_API_SECRET: ${{ secrets.VITE_XFYUN_API_SECRET }}
 
       - uses: actions/configure-pages@v4
 

@@ -97,7 +97,6 @@ export default function App() {
         if (isFinal) finalRef.current += text;
         setTranscript((finalRef.current + text).slice(-200));
       },
-      () => { if (phase === 'listening') evalAnswer(); },
     );
     if (ok) setPhase('listening');
   };

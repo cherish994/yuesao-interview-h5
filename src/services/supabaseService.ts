@@ -6,39 +6,31 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-async function getUserId(): Promise<string> {
-  const { data } = await supabase.auth.getUser();
-  if (data.user) return data.user.id;
-  // 未登录时降级用本地 ID
-  let id = localStorage.getItem('yuesao_user_id');
-  if (!id) {
-    id = 'anon_' + Math.random().toString(36).slice(2, 10);
-    localStorage.setItem('yuesao_user_id', id);
-  }
-  return id;
+const PHONE_KEY = 'yuesao_phone';
+
+export function getStoredPhone(): string {
+  return localStorage.getItem(PHONE_KEY) || '';
 }
 
-export async function getCurrentUser() {
-  const { data } = await supabase.auth.getUser();
-  return data.user;
+export function storePhone(phone: string) {
+  localStorage.setItem(PHONE_KEY, phone);
 }
 
-export async function logout() {
-  await supabase.auth.signOut();
+export function clearPhone() {
+  localStorage.removeItem(PHONE_KEY);
 }
 
 export async function loadSessions(): Promise<InterviewSession[]> {
-  const userId = await getUserId();
+  const phone = getStoredPhone();
+  if (!phone) return [];
+
   const { data, error } = await supabase
     .from('sessions')
     .select('*')
-    .eq('user_id', userId)
+    .eq('user_id', phone)
     .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('加载历史记录失败:', error.message);
-    return [];
-  }
+  if (error) { console.error('加载失败:', error.message); return []; }
 
   return (data || []).map(row => ({
     id: row.id,
@@ -51,12 +43,14 @@ export async function loadSessions(): Promise<InterviewSession[]> {
 }
 
 export async function saveSession(session: InterviewSession): Promise<void> {
-  const userId = await getUserId();
+  const phone = getStoredPhone();
+  if (!phone) return;
+
   const { error } = await supabase
     .from('sessions')
     .upsert({
       id: session.id,
-      user_id: userId,
+      user_id: phone,
       candidate: session.candidate,
       answers: session.answers,
       report: session.report || null,
@@ -64,7 +58,5 @@ export async function saveSession(session: InterviewSession): Promise<void> {
       finished_at: session.finishedAt || null,
     });
 
-  if (error) {
-    console.error('保存记录失败:', error.message);
-  }
+  if (error) console.error('保存失败:', error.message);
 }

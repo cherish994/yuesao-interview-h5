@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { questions } from './data/questionBank';
 import { evaluateAnswer, generateReport, getRealtimeFollowUp } from './services/aiService';
 import { startListening, stopListening, isSupported, resetBuffer } from './services/speechService';
-import { loadSessions as dbLoad, saveSession as dbSave, deleteSession as dbDelete, getStoredPhone, storePhone, clearPhone } from './services/supabaseService';
+import { loadSessions as dbLoad, saveSession as dbSave, deleteSession as dbDelete, getUserCredits, redeemCode, getStoredPhone, storePhone, clearPhone } from './services/supabaseService';
 import Auth from './components/Auth';
 import Waveform from './components/Waveform';
 import type {
@@ -30,11 +30,31 @@ export default function App() {
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [session, setSession] = useState<InterviewSession | null>(null);
   const [phone, setPhone] = useState(getStoredPhone);
+  const [credits, setCredits] = useState<number | null>(null);
+  const [showRedeem, setShowRedeem] = useState(false);
+  const [redeemInput, setRedeemInput] = useState('');
+  const [redeemMsg, setRedeemMsg] = useState('');
+  const [redeemLoading, setRedeemLoading] = useState(false);
 
   const refreshSessions = () => {
     setSessionsLoading(true);
     dbLoad().then(data => { setSessions(data); setSessionsLoading(false); })
             .catch(() => setSessionsLoading(false));
+    if (phone) getUserCredits(phone).then(c => setCredits(c.remaining));
+  };
+
+  const handleRedeem = async () => {
+    if (!redeemInput.trim()) return;
+    setRedeemLoading(true); setRedeemMsg('');
+    const result = await redeemCode(phone, redeemInput);
+    setRedeemLoading(false);
+    if (result.ok) {
+      setRedeemMsg(`✅ 兑换成功！解锁 ${result.credits} 次面试`);
+      setRedeemInput('');
+      getUserCredits(phone).then(c => setCredits(c.remaining));
+    } else {
+      setRedeemMsg(`❌ ${result.error}`);
+    }
   };
 
   useEffect(() => {
@@ -270,9 +290,46 @@ export default function App() {
           </button>
         </div>
       </div>
-      <button className={styles.startBtn} onClick={() => { setName(''); setYrs(''); setBabies(''); setLongest(''); setErr(''); setView('setup'); }}>
-        ＋ 开始新面试
+      {/* 次数显示 */}
+      {credits !== null && (
+        <div style={{ textAlign: 'center', margin: '12px 0 4px', fontSize: 13, color: credits > 0 ? '#6B7FD7' : '#E05454' }}>
+          {credits > 0 ? `剩余 ${credits} 次面试` : '次数已用完'}
+        </div>
+      )}
+
+      <button className={styles.startBtn} onClick={() => {
+        if (credits !== null && credits <= 0) { setShowRedeem(true); return; }
+        setName(''); setYrs(''); setBabies(''); setLongest(''); setErr(''); setView('setup');
+      }}>
+        {credits !== null && credits <= 0 ? '购买次数' : '＋ 开始新面试'}
       </button>
+
+      {/* 兑换码弹窗 */}
+      {showRedeem && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100 }}
+          onClick={() => setShowRedeem(false)}>
+          <div style={{ background: '#fff', borderRadius: '20px 20px 0 0', padding: 28, width: '100%', maxWidth: 480 }}
+            onClick={e => e.stopPropagation()}>
+            <p style={{ fontWeight: 700, fontSize: 17, marginBottom: 8 }}>兑换使用次数</p>
+            <p style={{ fontSize: 13, color: '#888', marginBottom: 20 }}>购买后联系我获取兑换码</p>
+            <input
+              style={{ display: 'block', width: '100%', border: '1.5px solid #E0E1EE', borderRadius: 10, padding: '12px 16px', fontSize: 15, letterSpacing: 3, textAlign: 'center', boxSizing: 'border-box' as const, marginBottom: 8 }}
+              placeholder="输入兑换码（如 YUESAO-ABCD）"
+              value={redeemInput}
+              onChange={e => { setRedeemInput(e.target.value.toUpperCase()); setRedeemMsg(''); }}
+            />
+            {redeemMsg && <p style={{ fontSize: 13, textAlign: 'center', marginBottom: 8, color: redeemMsg.startsWith('✅') ? '#2E9B6E' : '#E05454' }}>{redeemMsg}</p>}
+            <button onClick={handleRedeem} disabled={redeemLoading}
+              style={{ display: 'block', width: '100%', background: '#6B7FD7', color: '#fff', border: 'none', borderRadius: 10, padding: '14px 0', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+              {redeemLoading ? '验证中...' : '立即兑换'}
+            </button>
+            <button onClick={() => setShowRedeem(false)}
+              style={{ display: 'block', width: '100%', background: 'none', border: 'none', color: '#888', fontSize: 14, marginTop: 10, cursor: 'pointer' }}>
+              关闭
+            </button>
+          </div>
+        </div>
+      )}
       {sessionsLoading && <p style={{ textAlign: 'center', color: '#aaa', padding: '0.4rem', fontSize: '0.26rem' }}>加载历史记录...</p>}
       {!sessionsLoading && sessions.length > 0 && <>
         <p className={styles.secLabel}>历史记录</p>

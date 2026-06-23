@@ -42,6 +42,52 @@ export async function loadSessions(): Promise<InterviewSession[]> {
   }));
 }
 
+// 查询用户剩余次数
+// 免费 2 次 + 兑换码累计次数 - 已用次数
+export async function getUserCredits(phone: string): Promise<{ remaining: number; used: number; freeLeft: number }> {
+  const FREE = 2;
+
+  // 已用次数
+  const { count: used } = await supabase
+    .from('sessions')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', phone);
+
+  // 已兑换的付费次数
+  const { data: codes } = await supabase
+    .from('invite_codes')
+    .select('credits')
+    .eq('redeemed_by', phone);
+
+  const paid = (codes || []).reduce((sum, c) => sum + (c.credits || 0), 0);
+  const total = FREE + paid;
+  const usedCount = used || 0;
+  const freeLeft = Math.max(0, FREE - usedCount);
+  const remaining = Math.max(0, total - usedCount);
+
+  return { remaining, used: usedCount, freeLeft };
+}
+
+// 兑换码
+export async function redeemCode(phone: string, code: string): Promise<{ ok: boolean; credits?: number; error?: string }> {
+  const { data, error } = await supabase
+    .from('invite_codes')
+    .select('*')
+    .eq('code', code.trim().toUpperCase())
+    .single();
+
+  if (error || !data) return { ok: false, error: '兑换码不存在' };
+  if (data.redeemed_by) return { ok: false, error: '该兑换码已被使用' };
+
+  const { error: updateErr } = await supabase
+    .from('invite_codes')
+    .update({ redeemed_by: phone, redeemed_at: new Date().toISOString() })
+    .eq('code', code.trim().toUpperCase());
+
+  if (updateErr) return { ok: false, error: '兑换失败，请重试' };
+  return { ok: true, credits: data.credits };
+}
+
 export async function deleteSession(id: string): Promise<void> {
   const { error } = await supabase.from('sessions').delete().eq('id', id);
   if (error) console.error('删除失败:', error.message);

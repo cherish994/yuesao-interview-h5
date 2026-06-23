@@ -175,6 +175,11 @@ export async function startListening(onResult: ResultCallback): Promise<boolean>
   return true;
 }
 
+// 切题时调用：清空累积文字，讯飞连接保持不断
+export function resetBuffer(): void {
+  resultBuffer = '';
+}
+
 export function stopListening(): void {
   shouldRun = false;
 

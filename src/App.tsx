@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { questions } from './data/questionBank';
 import { evaluateAnswer, generateReport, getRealtimeFollowUp } from './services/aiService';
-import { startListening, stopListening, isSupported } from './services/speechService';
+import { startListening, stopListening, isSupported, resetBuffer } from './services/speechService';
 import { loadSessions as dbLoad, saveSession as dbSave, deleteSession as dbDelete, getStoredPhone, storePhone, clearPhone } from './services/supabaseService';
 import Auth from './components/Auth';
 import Waveform from './components/Waveform';
@@ -109,6 +109,7 @@ export default function App() {
 
   const handleListen = async () => {
     finalRef.current = '';
+    resetBuffer();
     setTranscript('');
     if (!isSupported()) { setErr('请用 Safari 或 Chrome 打开'); return; }
     const ok = await startListening(
@@ -189,6 +190,7 @@ export default function App() {
   const skip = () => {
     // 跳过：清空当前转录，不保存
     finalRef.current = '';
+    resetBuffer();
     setTranscript('');
     if (qIdx < questions.length - 1) {
       setQIdx(i => i + 1);
@@ -207,8 +209,10 @@ export default function App() {
     const newIdx = qIdx + direction;
     if (newIdx < 0 || newIdx >= questions.length) return;
     await autoSaveCurrentAnswer();
+    resetBuffer();           // 清空讯飞累积文字
+    finalRef.current = '';   // 清空本地累积
     setQIdx(newIdx);
-    setTranscript(''); finalRef.current = '';
+    setTranscript('');
     setEvalResult(null); setFollowUp(false); setFollowUpText(null); setGuideOpen(false);
     clearAutoFollowUp();
     // 切题后始终确保录音运行

@@ -122,6 +122,29 @@ export default function App() {
     if (ok) setPhase('listening');
   };
 
+  // 后台静默保存当前题目的转录（不停录音，不切换 phase）
+  const autoSaveCurrentAnswer = useCallback(async (qOverride?: typeof q, answersOverride?: AnswerRecord[]) => {
+    const curQ = qOverride || q;
+    const curAnswers = answersOverride || answers;
+    const text = finalRef.current.trim();
+    if (!text || !session) return;
+    const rec: AnswerRecord = {
+      questionId: curQ.id, transcript: text, evaluation: null,
+      followUpTranscripts: curAnswers.find(a => a.questionId === curQ.id)?.followUpTranscripts || [],
+      skipped: false,
+    };
+    const newAns = [...curAnswers.filter(a => a.questionId !== curQ.id), rec];
+    setAnswers(newAns);
+    saveAndUpdate(session, newAns);
+    // 后台评估，不阻塞
+    evaluateAnswer(curQ, text, session.candidate).then(ev => {
+      const updated = newAns.map(a => a.questionId === curQ.id ? { ...a, evaluation: ev } : a);
+      setAnswers(updated);
+      saveAndUpdate(session, updated);
+    }).catch(() => {});
+  }, [q, answers, session]);
+
+  // 手动停止并立即评估（显示结果卡）
   const evalAnswer = useCallback(async () => {
     stopListening();
     const text = finalRef.current;
@@ -159,14 +182,12 @@ export default function App() {
   };
 
   const skip = () => {
-    const rec: AnswerRecord = { questionId: q.id, transcript: '', evaluation: null, followUpTranscripts: [], skipped: true };
-    const newAns = [...answers.filter(a => a.questionId !== q.id), rec];
-    setAnswers(newAns);
-    saveAndUpdate(session!, newAns);
+    // 跳过：清空当前转录，不保存
+    finalRef.current = '';
+    setTranscript('');
     if (qIdx < questions.length - 1) {
       setQIdx(i => i + 1);
       if (phase !== 'listening') setPhase('idle');
-      setTranscript(''); finalRef.current = '';
       setEvalResult(null); setFollowUp(false); setFollowUpText(null); setGuideOpen(false);
       clearAutoFollowUp();
     }
@@ -177,10 +198,10 @@ export default function App() {
     if (followUpTimerRef.current) clearTimeout(followUpTimerRef.current);
   };
 
-  const nextQ = () => {
+  const nextQ = async () => {
     if (qIdx < questions.length - 1) {
+      await autoSaveCurrentAnswer();
       setQIdx(i => i + 1);
-      // 录音中：保持 listening，只清转录内容
       if (phase !== 'listening') setPhase('idle');
       setTranscript(''); finalRef.current = '';
       setEvalResult(null); setFollowUp(false); setFollowUpText(null); setGuideOpen(false);
@@ -188,8 +209,9 @@ export default function App() {
     }
   };
 
-  const prevQ = () => {
+  const prevQ = async () => {
     if (qIdx > 0) {
+      await autoSaveCurrentAnswer();
       setQIdx(i => i - 1);
       if (phase !== 'listening') setPhase('idle');
       setTranscript(''); finalRef.current = '';
@@ -199,6 +221,8 @@ export default function App() {
   };
 
   const finish = async () => {
+    await autoSaveCurrentAnswer();
+    stopListening();
     setLoading(true); setView('report'); setReport(null); setErr('');
     try {
       const r = await generateReport(session!.candidate, answers);
@@ -341,7 +365,7 @@ export default function App() {
           onClick={phase === 'listening' ? evalAnswer : handleListen}
           disabled={phase === 'processing'}
         >
-          {phase === 'listening' ? '⏹ 停止并评估' : phase === 'processing' ? 'AI 分析中...' : '🎙 开始听'}
+          {phase === 'listening' ? '⏹ 停止 & 看AI分析' : phase === 'processing' ? 'AI 分析中...' : '🎙 开始听'}
         </button>
       )}
 

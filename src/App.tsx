@@ -125,9 +125,7 @@ export default function App() {
   };
 
   const startTutorial = () => {
-    const candidate: CandidateProfile = { name: '示范·王阿姨', yearsOfExperience: 5, babiesHandled: 18, longestAssignment: 4 };
-    const sess: InterviewSession = { id: `tutorial_${Date.now()}`, candidate, startedAt: new Date().toISOString(), answers: [] };
-    setSession(sess);
+    setSession(null); // 教程不创建真实 session，不计入次数、不存数据库
     resetInterview();
     setIsTutorial(true);
     setTutorialStep(0);

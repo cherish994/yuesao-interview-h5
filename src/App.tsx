@@ -165,8 +165,17 @@ export default function App() {
         finalRef.current = current;
         if (i >= fullText.length) {
           clearInterval(tutorialTypingRef.current!);
-          // 打完自动触发评估
-          setTimeout(() => evalAnswer(), 600);
+          setPhase('idle');
+          // 打完：后台保存 + 弹出追问建议，不显示评估卡
+          setTimeout(async () => {
+            await autoSaveCurrentAnswer();
+            const TUTORIAL_FOLLOWUPS = [
+              '被续单的那家，宝宝有没有什么特别的情况？',
+              '如果宝宝体重增长偏慢，你会怎么判断是否需要加奶？',
+              '具体哪些方法可以缓解肠胀气，你用过哪些？',
+            ];
+            setAutoFollowUp(TUTORIAL_FOLLOWUPS[tutorialStep] || null);
+          }, 300);
         }
       }, 50);
       return;
@@ -271,10 +280,27 @@ export default function App() {
       if (tutorialTypingRef.current) clearInterval(tutorialTypingRef.current);
       const nextTutStep = tutorialStep + 1;
       if (nextTutStep >= TUTORIAL_DATA.length) {
-        // 教程完成
+        // 教程完成 → 显示示例报告
         setIsTutorial(false);
-        setView('home');
-        alert('🎉 教程完成！现在可以开始真实面试了。');
+        const sampleReport: InterviewReport = {
+          authenticityScore: 'medium',
+          authenticityNote: '从业5年带18个宝宝，但最长4个月略短，答题质量参差不齐，经验基本可信但有些知识点存在盲区。',
+          categoryScores: { '工作经验核实': 72, '月嫂技能': 80, '儿童常见问题护理': 45, '先进育儿意识': 60 },
+          strengths: ['有续单经历，说明服务质量较好', '奶粉喂养知识掌握扎实', '工作年限较长，基础护理熟练'],
+          concerns: ['对肠胀气认知有明显错误，称带的宝宝从没有过肠胀气', '可能存在夸大自身护理能力的倾向'],
+          recommendation: '谨慎考虑',
+          recommendationReason: '基础技能可以，但儿科知识有明显漏洞',
+          dimensionNotes: {
+            '工作经验核实': '5年经验18个宝宝，有续单记录，整体可信，最长4个月略短。',
+            '月嫂技能': '奶粉调配、喂养间隔说得清楚，有判断方法，是加分项。',
+            '儿童常见问题护理': '肠胀气认知有误，称带的宝宝"从没有过肠胀气"，这是红旗——肠胀气是所有宝宝必经阶段，说明她要么不了解要么不诚实。',
+            '先进育儿意识': '未测试，无法评估。',
+          },
+          summary: '王阿姨整体是中等水平的月嫂。基础护理技能掌握较好，特别是奶粉喂养方面说得有条理。但在儿童常见问题方面存在知识漏洞，关于肠胀气的回答暴露出对新生儿护理认知不够全面，需要在上户前特别沟通这块内容。建议录用前再追问几道护理类问题，重点考察她对黄疸、皮肤问题的处理经验。',
+        };
+        setReport(sampleReport);
+        setSession({ id: 'tutorial_demo', candidate: { name: '示范·王阿姨', yearsOfExperience: 5, babiesHandled: 18, longestAssignment: 4 }, startedAt: new Date().toISOString(), answers: [], report: sampleReport });
+        setView('report');
         return;
       }
       setTutorialStep(nextTutStep);
@@ -458,7 +484,7 @@ export default function App() {
       <div className={styles.progWrap}>
         <div className={styles.progBar} style={{ width: `${(answered / questions.length) * 100}%` }} />
       </div>
-      <p className={styles.progText}>{answered}/{questions.length} 题已评估</p>
+      <p className={styles.progText}>{answered}/{questions.length} 题已记录</p>
 
       <div className={styles.card}>
         <div className={styles.qHead}>
@@ -510,53 +536,17 @@ export default function App() {
         </div>
       )}
 
-      {!followUp && phase !== 'result' && (
-        <button
-          className={`${styles.listenBtn} ${phase === 'listening' ? styles.active : ''}`}
-          onClick={phase === 'listening' ? evalAnswer : handleListen}
-          disabled={phase === 'processing'}
-        >
-          {phase === 'listening' ? '⏹ 停止 & 看AI分析' : phase === 'processing' ? 'AI 分析中...' : '🎙 开始听'}
+      {/* 一键开始录音（未录时显示） */}
+      {phase === 'idle' && (
+        <button className={styles.listenBtn} onClick={handleListen}>
+          🎙 开始听
         </button>
       )}
 
-      {followUp && (
-        <>
-          <button
-            className={`${styles.listenBtn} ${styles.fuBtn} ${phase === 'listening' ? styles.active : ''}`}
-            onClick={phase === 'listening' ? handleFollowUpStop : handleListen}
-          >
-            {phase === 'listening' ? '⏹ 停止追问' : '🎙 开始听追问回答'}
-          </button>
-          <button className={styles.cancelBtn} onClick={() => { setFollowUp(false); setPhase('result'); }}>取消追问</button>
-        </>
-      )}
-
-      {phase === 'processing' && <div className={styles.aiCard}><div className={styles.spinner} /> AI 分析中...</div>}
-      {phase === 'result' && evalResult && !followUp && (
-        <div className={styles.aiCard}>
-          <div className={styles.scoreRow}>
-            <span style={{ fontSize: 22 }}>{SCORE_EMOJI[evalResult.score]}</span>
-            <span className={styles.scoreLabel}>{SCORE_LABEL[evalResult.score]}</span>
-          </div>
-          {evalResult.highlights.length > 0 && <div>
-            <p className={styles.hlLabel}>✓ 答到了</p>
-            {evalResult.highlights.map((h, i) => <p key={i} className={styles.hlItem}>• {h}</p>)}
-          </div>}
-          {evalResult.concerns.length > 0 && <div>
-            <p className={styles.cnLabel}>✗ 未提到</p>
-            {evalResult.concerns.map((c, i) => <p key={i} className={styles.cnItem}>• {c}</p>)}
-          </div>}
-          {evalResult.followUp && (
-            <div className={styles.fuBox}>
-              <p className={styles.fuLabel2}>AI 建议追问：</p>
-              <p className={styles.fuText}>{evalResult.followUp}</p>
-            </div>
-          )}
-          <div className={styles.aiActions}>
-            {evalResult.followUp && <button className={styles.fuActionBtn} onClick={() => { setFollowUp(true); setFollowUpText(evalResult.followUp); setPhase('idle'); setTranscript(''); finalRef.current = ''; }}>追问</button>}
-            <button className={styles.nextBtn} onClick={nextQ}>下一题 →</button>
-          </div>
+      {/* 录音中：只显示状态提示，无停止按钮 */}
+      {phase === 'listening' && (
+        <div style={{ textAlign: 'center', padding: '12px 0', color: '#E05454', fontSize: 14, fontWeight: 600 }}>
+          🔴 录音中 — 月嫂说完后点「下一题」自动保存
         </div>
       )}
 

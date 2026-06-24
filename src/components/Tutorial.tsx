@@ -7,7 +7,7 @@ interface Props {
   onFinish: () => void;
 }
 
-type Phase = 'intro' | 'typing' | 'evaluating' | 'result' | 'done';
+type Phase = 'intro' | 'idle' | 'typing' | 'evaluating' | 'result' | 'done';
 
 const SCORE_EMOJI: Record<number, string> = { 1: '🔴', 2: '🟡', 3: '🟢' };
 const SCORE_LABEL: Record<number, string> = { 1: '回答较差', 2: '回答一般', 3: '回答到位' };
@@ -65,7 +65,7 @@ export default function Tutorial({ onFinish }: Props) {
       setPhase('done');
     } else {
       setStep(next);
-      setPhase('idle' as Phase);
+      setPhase('idle');
       setDisplayText('');
       setEvaluation(null);
     }
@@ -87,7 +87,7 @@ export default function Tutorial({ onFinish }: Props) {
           <p style={{ fontWeight: 700, color: '#1A1A2E' }}>{tutorialCandidate.name}</p>
           <p style={{ fontSize: 13, color: '#666' }}>{tutorialCandidate.yearsOfExperience}年经验 · {tutorialCandidate.babiesHandled}个宝宝 · 最长{tutorialCandidate.longestAssignment}个月</p>
         </div>
-        <button style={S.primaryBtn} onClick={() => { setStep(0); setPhase('idle' as Phase); }}>开始教程 →</button>
+        <button style={S.primaryBtn} onClick={() => { setStep(0); setPhase('idle'); }}>开始教程 →</button>
         <button style={S.skipBtn} onClick={onFinish}>跳过，直接开始</button>
       </div>
     </div>
@@ -141,7 +141,7 @@ export default function Tutorial({ onFinish }: Props) {
         <div style={{ background: '#F9FAFB', borderRadius: 12, padding: 14, marginBottom: 14, minHeight: 80 }}>
           <p style={{ fontSize: 12, color: '#888', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: phase === 'typing' ? '#E05454' : '#ddd', display: 'inline-block' }} />
-            {phase === 'typing' ? '月嫂回答中...' : phase === 'idle' as Phase ? '等待月嫂回答' : '转录完成'}
+            {phase === 'typing' ? '月嫂回答中...' : phase === 'idle' ? '等待月嫂回答' : '转录完成'}
           </p>
           <p style={{ fontSize: 15, color: '#1A1A2E', lineHeight: 1.7 }}>
             {displayText}
@@ -179,7 +179,7 @@ export default function Tutorial({ onFinish }: Props) {
         )}
 
         {/* 操作按钮 */}
-        {(phase === 'idle' as Phase) && (
+        {(phase === 'idle') && (
           <button style={S.primaryBtn} onClick={startTyping}>
             🎭 模拟月嫂回答
           </button>

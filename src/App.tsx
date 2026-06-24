@@ -40,9 +40,24 @@ export default function App() {
   const isTutorialRef = useRef(false);
   const tutorialStepRef = useRef(0);
   const TUTORIAL_DATA = [
-    { qIdx: 0, hint: '👆 点「开始听」— 系统自动模拟月嫂回答，看 AI 怎么判断', answer: '我做了快五年了，带过大概十七八个宝宝。最长的那家做了四个多月，月子里觉得好就把我留下来继续带，一直到宝宝快半岁才走。' },
-    { qIdx: 4, hint: '👆 再点「开始听」— 这次是个好答案，注意 AI 怎么评分', answer: '不加水的，按照罐子上的比例冲就好，加水会影响营养比例。奶量根据宝宝月龄和体重调整，一般两个月每次80到100毫升，间隔三个小时。如果尿次够还一直找，可以适当加一点；频繁吐奶就要考虑是不是喂多了。' },
-    { qIdx: 8, hint: '👆 再点「开始听」— 这个答案有问题，看 AI 能不能找出来', answer: '我带的宝宝基本上都没有肠胀气，可能是我护理得比较好吧，喂奶姿势对的话宝宝就不会胀气。绞痛的话就是哭得比较厉害，一般哄哄就好了。' },
+    {
+      qIdx: 0, hint: '系统正在模拟月嫂回答，看右侧追问建议如何出现',
+      answer: '我做了快五年了，带过大概十七八个宝宝。最长的那家做了四个多月，月子里觉得好就把我留下来继续带，一直到宝宝快半岁才走。',
+      followUpQ: '被续单的那家，宝宝有没有什么特别需要处理的情况？',
+      followUpA: '那家是头胎宝宝，比较容易胀气，我每次喂完都会拍嗝，还教妈妈做排气操，大概两周就好多了。',
+    },
+    {
+      qIdx: 4, hint: '这是一个好答案，注意追问建议怎么出现',
+      answer: '不加水的，按照罐子上的比例冲就好。奶量根据宝宝月龄和体重调整，两个月每次80到100毫升，间隔约三小时。尿次够还一直找可以适当加；频繁吐奶就要考虑喂多了。',
+      followUpQ: '如果宝宝体重增长偏慢，你会怎么判断是否需要加奶？',
+      followUpA: '我会先看尿次数，少于六次、吃完表情不满足，这种情况下考虑加奶。体重要结合月龄正常范围来判断，不能只看绝对数字。',
+    },
+    {
+      qIdx: 8, hint: '这个答案有问题，看 AI 给出了什么追问',
+      answer: '我带的宝宝基本上都没有肠胀气，可能是我护理得比较好吧，喂奶姿势对的话宝宝就不会胀气。绞痛就是哭得比较厉害，一般哄哄就好了。',
+      followUpQ: '如果宝宝睡觉时突然弓腰哭闹，你会怎么处理？',
+      followUpA: '啊，那个哄一哄就好了，可能是做梦吓到了吧。',
+    },
   ];
   const [redeemInput, setRedeemInput] = useState('');
   const [redeemMsg, setRedeemMsg] = useState('');
@@ -173,15 +188,31 @@ export default function App() {
         if (i >= fullText.length) {
           clearInterval(tutorialTypingRef.current!);
           setPhase('idle');
-          // 打完：后台保存 + 弹出追问建议，不显示评估卡
+          // 主答案打完：弹追问题目
           setTimeout(async () => {
-            await autoSaveCurrentAnswer();
-            const TUTORIAL_FOLLOWUPS = [
-              '被续单的那家，宝宝有没有什么特别的情况？',
-              '如果宝宝体重增长偏慢，你会怎么判断是否需要加奶？',
-              '具体哪些方法可以缓解肠胀气，你用过哪些？',
-            ];
-            setAutoFollowUp(TUTORIAL_FOLLOWUPS[step] || null);
+            const tutData = TUTORIAL_DATA[step];
+            setAutoFollowUp(tutData?.followUpQ || null);
+            // 再等 2 秒，自动模拟月嫂回答追问
+            setTimeout(() => {
+              if (!isTutorialRef.current) return;
+              const fuText = tutData?.followUpA || '';
+              if (!fuText) return;
+              setTranscript('');
+              finalRef.current = '';
+              setPhase('listening');
+              let j = 0;
+              tutorialTypingRef.current = setInterval(() => {
+                j++;
+                const cur = fuText.slice(0, j);
+                setTranscript(cur);
+                finalRef.current = cur;
+                if (j >= fuText.length) {
+                  clearInterval(tutorialTypingRef.current!);
+                  setPhase('idle');
+                  setAutoFollowUp(null); // 追问回答完，清除追问卡
+                }
+              }, 50);
+            }, 2000);
           }, 300);
         }
       }, 50);
@@ -547,8 +578,8 @@ export default function App() {
         </div>
       )}
 
-      {/* 一键开始录音（未录时显示） */}
-      {phase === 'idle' && (
+      {/* 一键开始录音（未录时显示，教程中隐藏） */}
+      {phase === 'idle' && !isTutorial && (
         <button className={styles.listenBtn} onClick={handleListen}>
           🎙 开始听
         </button>

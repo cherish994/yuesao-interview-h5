@@ -7,6 +7,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const PHONE_KEY = 'yuesao_phone';
+const DEVICE_KEY = 'yuesao_device_id';
 
 export function getStoredPhone(): string {
   return localStorage.getItem(PHONE_KEY) || '';
@@ -18,6 +19,39 @@ export function storePhone(phone: string) {
 
 export function clearPhone() {
   localStorage.removeItem(PHONE_KEY);
+}
+
+// 生成/获取设备 ID（首次访问生成，永久存本地）
+export function getDeviceId(): string {
+  let id = localStorage.getItem(DEVICE_KEY);
+  if (!id) {
+    // 结合浏览器特征生成稳定指纹
+    const raw = [
+      navigator.userAgent,
+      navigator.language,
+      screen.width + 'x' + screen.height,
+      new Date().getTimezoneOffset(),
+      navigator.hardwareConcurrency || 0,
+    ].join('|');
+    // 简单哈希
+    let hash = 0;
+    for (let i = 0; i < raw.length; i++) {
+      hash = (Math.imul(31, hash) + raw.charCodeAt(i)) | 0;
+    }
+    id = 'dev_' + Math.abs(hash).toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+    localStorage.setItem(DEVICE_KEY, id);
+  }
+  return id;
+}
+
+// 检查设备的免费次数（跨手机号）
+export async function getDeviceFreeUsed(): Promise<number> {
+  const deviceId = getDeviceId();
+  const { count } = await supabase
+    .from('sessions')
+    .select('*', { count: 'exact', head: true })
+    .eq('device_id', deviceId);
+  return count || 0;
 }
 
 export async function loadSessions(): Promise<InterviewSession[]> {
@@ -43,29 +77,43 @@ export async function loadSessions(): Promise<InterviewSession[]> {
 }
 
 // 查询用户剩余次数
-// 免费 2 次 + 兑换码累计次数 - 已用次数
-export async function getUserCredits(phone: string): Promise<{ remaining: number; used: number; freeLeft: number }> {
+// 免费次数：绑定设备（防刷号），付费次数：绑定手机号
+export async function getUserCredits(phone: string): Promise<{ remaining: number; used: number }> {
   const FREE = 2;
+  const deviceId = getDeviceId();
 
-  // 已用次数
-  const { count: used } = await supabase
+  // 该设备用了几次（跨所有手机号）
+  const { count: deviceUsed } = await supabase
+    .from('sessions')
+    .select('*', { count: 'exact', head: true })
+    .eq('device_id', deviceId);
+
+  // 该手机号用了几次（总计）
+  const { count: phoneUsed } = await supabase
     .from('sessions')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', phone);
 
-  // 已兑换的付费次数
+  // 付费次数（按手机号）
   const { data: codes } = await supabase
     .from('invite_codes')
     .select('credits')
     .eq('redeemed_by', phone);
 
   const paid = (codes || []).reduce((sum, c) => sum + (c.credits || 0), 0);
-  const total = FREE + paid;
-  const usedCount = used || 0;
-  const freeLeft = Math.max(0, FREE - usedCount);
-  const remaining = Math.max(0, total - usedCount);
 
-  return { remaining, used: usedCount, freeLeft };
+  // 设备免费剩余：min(设备还没用完的, 手机号账户下还剩的)
+  const deviceFreeLeft = Math.max(0, FREE - (deviceUsed || 0));
+  const freeRemaining = Math.min(deviceFreeLeft, Math.max(0, FREE - (phoneUsed || 0)));
+
+  // 付费剩余 = 付费总量 - 手机号已用超出免费的部分
+  const paidUsed = Math.max(0, (phoneUsed || 0) - FREE);
+  const paidRemaining = Math.max(0, paid - paidUsed);
+
+  return {
+    remaining: freeRemaining + paidRemaining,
+    used: phoneUsed || 0,
+  };
 }
 
 // 兑换码
@@ -102,6 +150,7 @@ export async function saveSession(session: InterviewSession): Promise<void> {
     .upsert({
       id: session.id,
       user_id: phone,
+      device_id: getDeviceId(),   // 记录设备指纹，防刷号
       candidate: session.candidate,
       answers: session.answers,
       report: session.report || null,

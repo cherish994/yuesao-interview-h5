@@ -37,6 +37,8 @@ export default function App() {
   const [isTutorial, setIsTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
   const tutorialTypingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isTutorialRef = useRef(false);
+  const tutorialStepRef = useRef(0);
   const TUTORIAL_DATA = [
     { qIdx: 0, hint: '👆 点「开始听」— 系统自动模拟月嫂回答，看 AI 怎么判断', answer: '我做了快五年了，带过大概十七八个宝宝。最长的那家做了四个多月，月子里觉得好就把我留下来继续带，一直到宝宝快半岁才走。' },
     { qIdx: 4, hint: '👆 再点「开始听」— 这次是个好答案，注意 AI 怎么评分', answer: '不加水的，按照罐子上的比例冲就好，加水会影响营养比例。奶量根据宝宝月龄和体重调整，一般两个月每次80到100毫升，间隔三个小时。如果尿次够还一直找，可以适当加一点；频繁吐奶就要考虑是不是喂多了。' },
@@ -73,6 +75,10 @@ export default function App() {
 
   useEffect(() => {
     if (view !== 'interview') stopListening();
+    // 教程：进入面试页自动开始第一题模拟
+    if (view === 'interview' && isTutorialRef.current) {
+      setTimeout(() => handleListen(), 800);
+    }
   }, [view]);
   const [qIdx, setQIdx] = useState(0);
   const [answers, setAnswers] = useState<AnswerRecord[]>([]);
@@ -127,6 +133,8 @@ export default function App() {
   const startTutorial = () => {
     setSession(null); // 教程不创建真实 session，不计入次数、不存数据库
     resetInterview();
+    isTutorialRef.current = true;
+    tutorialStepRef.current = 0;
     setIsTutorial(true);
     setTutorialStep(0);
     setQIdx(TUTORIAL_DATA[0].qIdx);
@@ -151,9 +159,10 @@ export default function App() {
     resetBuffer();
     setTranscript('');
     // 教程模式：用打字机模拟月嫂回答，不启动真实录音
-    if (isTutorial) {
+    if (isTutorialRef.current) {
       setPhase('listening');
-      const fullText = TUTORIAL_DATA[tutorialStep]?.answer || '';
+      const step = tutorialStepRef.current;
+      const fullText = TUTORIAL_DATA[step]?.answer || '';
       let i = 0;
       if (tutorialTypingRef.current) clearInterval(tutorialTypingRef.current);
       tutorialTypingRef.current = setInterval(() => {
@@ -172,7 +181,7 @@ export default function App() {
               '如果宝宝体重增长偏慢，你会怎么判断是否需要加奶？',
               '具体哪些方法可以缓解肠胀气，你用过哪些？',
             ];
-            setAutoFollowUp(TUTORIAL_FOLLOWUPS[tutorialStep] || null);
+            setAutoFollowUp(TUTORIAL_FOLLOWUPS[step] || null);
           }, 300);
         }
       }, 50);
@@ -279,6 +288,7 @@ export default function App() {
       const nextTutStep = tutorialStep + 1;
       if (nextTutStep >= TUTORIAL_DATA.length) {
         // 教程完成 → 显示示例报告
+        isTutorialRef.current = false;
         setIsTutorial(false);
         const sampleReport: InterviewReport = {
           authenticityScore: 'medium',
@@ -301,11 +311,14 @@ export default function App() {
         setView('report');
         return;
       }
+      tutorialStepRef.current = nextTutStep;
       setTutorialStep(nextTutStep);
       setQIdx(TUTORIAL_DATA[nextTutStep].qIdx);
       setPhase('idle'); setTranscript(''); finalRef.current = '';
       setEvalResult(null); setFollowUp(false); setFollowUpText(null); setGuideOpen(false);
       clearAutoFollowUp();
+      // 自动开始下一题的模拟（refs 已更新，不受状态异步影响）
+      setTimeout(() => handleListen(), 800);
       return;
     }
     const newIdx = qIdx + direction;
@@ -473,7 +486,7 @@ export default function App() {
             <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>教程 {tutorialStep + 1}/3</span>
             <p style={{ color: '#fff', fontSize: 13, marginTop: 2 }}>{TUTORIAL_DATA[tutorialStep]?.hint}</p>
           </div>
-          <button onClick={() => { setIsTutorial(false); setView('home'); }}
+          <button onClick={() => { isTutorialRef.current = false; setIsTutorial(false); setView('home'); }}
             style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: '#fff', fontSize: 11, borderRadius: 12, padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap' as const }}>
             退出教程
           </button>

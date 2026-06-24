@@ -42,7 +42,7 @@ export default function App() {
     setSessionsLoading(true);
     dbLoad().then(data => { setSessions(data); setSessionsLoading(false); })
             .catch(() => setSessionsLoading(false));
-    if (phone) getUserCredits(phone).then(c => setCredits(c.remaining));
+    if (phone) getUserCredits(phone).then(c => setCredits(c.remaining)).catch(() => setCredits(0));
   };
 
   const handleRedeem = async () => {

@@ -4,7 +4,6 @@ import { evaluateAnswer, generateReport, getRealtimeFollowUp } from './services/
 import { startListening, stopListening, isSupported, resetBuffer } from './services/speechService';
 import { loadSessions as dbLoad, saveSession as dbSave, deleteSession as dbDelete, getUserCredits, redeemCode, getStoredPhone, storePhone, clearPhone } from './services/supabaseService';
 import Auth from './components/Auth';
-import Tutorial from './components/Tutorial';
 import Waveform from './components/Waveform';
 import type {
   CandidateProfile, AnswerRecord, AIEvaluation,
@@ -32,8 +31,17 @@ export default function App() {
   const [session, setSession] = useState<InterviewSession | null>(null);
   const [phone, setPhone] = useState(getStoredPhone);
   const [credits, setCredits] = useState<number | null>(null);
-  const [showTutorial, setShowTutorial] = useState(false);
   const [showRedeem, setShowRedeem] = useState(false);
+
+  // 教程模式
+  const [isTutorial, setIsTutorial] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const tutorialTypingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const TUTORIAL_DATA = [
+    { qIdx: 0, hint: '👆 点「开始听」— 系统自动模拟月嫂回答，看 AI 怎么判断', answer: '我做了快五年了，带过大概十七八个宝宝。最长的那家做了四个多月，月子里觉得好就把我留下来继续带，一直到宝宝快半岁才走。' },
+    { qIdx: 4, hint: '👆 再点「开始听」— 这次是个好答案，注意 AI 怎么评分', answer: '不加水的，按照罐子上的比例冲就好，加水会影响营养比例。奶量根据宝宝月龄和体重调整，一般两个月每次80到100毫升，间隔三个小时。如果尿次够还一直找，可以适当加一点；频繁吐奶就要考虑是不是喂多了。' },
+    { qIdx: 8, hint: '👆 再点「开始听」— 这个答案有问题，看 AI 能不能找出来', answer: '我带的宝宝基本上都没有肠胀气，可能是我护理得比较好吧，喂奶姿势对的话宝宝就不会胀气。绞痛的话就是哭得比较厉害，一般哄哄就好了。' },
+  ];
   const [redeemInput, setRedeemInput] = useState('');
   const [redeemMsg, setRedeemMsg] = useState('');
   const [redeemLoading, setRedeemLoading] = useState(false);
@@ -116,6 +124,17 @@ export default function App() {
     return updated;
   };
 
+  const startTutorial = () => {
+    const candidate: CandidateProfile = { name: '示范·王阿姨', yearsOfExperience: 5, babiesHandled: 18, longestAssignment: 4 };
+    const sess: InterviewSession = { id: `tutorial_${Date.now()}`, candidate, startedAt: new Date().toISOString(), answers: [] };
+    setSession(sess);
+    resetInterview();
+    setIsTutorial(true);
+    setTutorialStep(0);
+    setQIdx(TUTORIAL_DATA[0].qIdx);
+    setView('interview');
+  };
+
   const beginInterview = () => {
     if (!name.trim()) { setErr('请填写月嫂姓名'); return; }
     const candidate: CandidateProfile = {
@@ -133,6 +152,25 @@ export default function App() {
     finalRef.current = '';
     resetBuffer();
     setTranscript('');
+    // 教程模式：用打字机模拟月嫂回答，不启动真实录音
+    if (isTutorial) {
+      setPhase('listening');
+      const fullText = TUTORIAL_DATA[tutorialStep]?.answer || '';
+      let i = 0;
+      if (tutorialTypingRef.current) clearInterval(tutorialTypingRef.current);
+      tutorialTypingRef.current = setInterval(() => {
+        i++;
+        const current = fullText.slice(0, i);
+        setTranscript(current);
+        finalRef.current = current;
+        if (i >= fullText.length) {
+          clearInterval(tutorialTypingRef.current!);
+          // 打完自动触发评估
+          setTimeout(() => evalAnswer(), 600);
+        }
+      }, 50);
+      return;
+    }
     if (!isSupported()) { setErr('请用 Safari 或 Chrome 打开'); return; }
     const ok = await startListening(
       (text, isFinal) => {
@@ -228,6 +266,24 @@ export default function App() {
   };
 
   const switchQuestion = async (direction: 1 | -1) => {
+    // 教程模式：按教程顺序切换
+    if (isTutorial && direction === 1) {
+      if (tutorialTypingRef.current) clearInterval(tutorialTypingRef.current);
+      const nextTutStep = tutorialStep + 1;
+      if (nextTutStep >= TUTORIAL_DATA.length) {
+        // 教程完成
+        setIsTutorial(false);
+        setView('home');
+        alert('🎉 教程完成！现在可以开始真实面试了。');
+        return;
+      }
+      setTutorialStep(nextTutStep);
+      setQIdx(TUTORIAL_DATA[nextTutStep].qIdx);
+      setPhase('idle'); setTranscript(''); finalRef.current = '';
+      setEvalResult(null); setFollowUp(false); setFollowUpText(null); setGuideOpen(false);
+      clearAutoFollowUp();
+      return;
+    }
     const newIdx = qIdx + direction;
     if (newIdx < 0 || newIdx >= questions.length) return;
     await autoSaveCurrentAnswer();
@@ -290,7 +346,7 @@ export default function App() {
             style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', fontSize: 12, borderRadius: 20, padding: '4px 12px', cursor: 'pointer' }}>
             切换账号
           </button>
-          <button onClick={() => setShowTutorial(true)}
+          <button onClick={startTutorial}
             style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', fontSize: 12, borderRadius: 20, padding: '4px 12px', cursor: 'pointer' }}>
             🎓 教程
           </button>
@@ -309,9 +365,6 @@ export default function App() {
       }}>
         {credits !== null && credits <= 0 ? '购买次数' : '＋ 开始新面试'}
       </button>
-
-      {/* 新手教程弹窗 */}
-      {showTutorial && <Tutorial onFinish={() => setShowTutorial(false)} />}
 
       {/* 兑换码弹窗 */}
       {showRedeem && (
@@ -389,6 +442,19 @@ export default function App() {
 
   if (view === 'interview') return (
     <div className={styles.screen}>
+      {/* 教程提示横幅 */}
+      {isTutorial && (
+        <div style={{ background: '#6B7FD7', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>教程 {tutorialStep + 1}/3</span>
+            <p style={{ color: '#fff', fontSize: 13, marginTop: 2 }}>{TUTORIAL_DATA[tutorialStep]?.hint}</p>
+          </div>
+          <button onClick={() => { setIsTutorial(false); setView('home'); }}
+            style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: '#fff', fontSize: 11, borderRadius: 12, padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap' as const }}>
+            退出教程
+          </button>
+        </div>
+      )}
       <div className={styles.progWrap}>
         <div className={styles.progBar} style={{ width: `${(answered / questions.length) * 100}%` }} />
       </div>
@@ -499,9 +565,11 @@ export default function App() {
       <div className={styles.bottomNav}>
         <button className={styles.navBtn} onClick={prevQ} disabled={qIdx === 0}>← 上题</button>
         <button className={styles.navBtn} style={{ color: '#aaa', border: '1px solid #eee' }} onClick={skip}>跳过</button>
-        {qIdx === questions.length - 1
-          ? <button className={styles.finBtn} onClick={finish}>生成报告</button>
-          : <button className={styles.navBtn} onClick={nextQ}>下题 →</button>}
+        {isTutorial
+          ? <button className={styles.finBtn} onClick={nextQ}>{tutorialStep >= TUTORIAL_DATA.length - 1 ? '完成教程 ✓' : '下一示例 →'}</button>
+          : qIdx === questions.length - 1
+            ? <button className={styles.finBtn} onClick={finish}>生成报告</button>
+            : <button className={styles.navBtn} onClick={nextQ}>下题 →</button>}
       </div>
     </div>
   );

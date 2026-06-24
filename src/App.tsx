@@ -284,11 +284,15 @@ export default function App() {
       <div className={styles.homeTop}>
         <h1 className={styles.appTitle}>月嫂面试助手</h1>
         <p className={styles.appSub}>AI 实时出题 · 追问 · 生成报告</p>
-        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-          <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>{phone}</span>
+        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>{phone}</span>
           <button onClick={() => { clearPhone(); setPhone(''); setSessions([]); }}
-            style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', fontSize: 12, borderRadius: 20, padding: '4px 12px', cursor: 'pointer' }}>
+            style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', fontSize: 12, borderRadius: 20, padding: '4px 12px', cursor: 'pointer' }}>
             切换账号
+          </button>
+          <button onClick={() => setShowTutorial(true)}
+            style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', fontSize: 12, borderRadius: 20, padding: '4px 12px', cursor: 'pointer' }}>
+            🎓 教程
           </button>
         </div>
       </div>
@@ -304,12 +308,6 @@ export default function App() {
         setName(''); setYrs(''); setBabies(''); setLongest(''); setErr(''); setView('setup');
       }}>
         {credits !== null && credits <= 0 ? '购买次数' : '＋ 开始新面试'}
-      </button>
-
-      {/* 新手教程按钮 */}
-      <button onClick={() => setShowTutorial(true)}
-        style={{ display: 'block', margin: '8px auto 0', background: 'none', border: '1px solid #E0E1EE', color: '#888', fontSize: 13, borderRadius: 20, padding: '6px 18px', cursor: 'pointer' }}>
-        🎓 新手教程
       </button>
 
       {/* 新手教程弹窗 */}

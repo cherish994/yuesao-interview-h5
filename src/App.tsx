@@ -4,6 +4,7 @@ import { evaluateAnswer, generateReport, getRealtimeFollowUp } from './services/
 import { startListening, stopListening, isSupported, resetBuffer } from './services/speechService';
 import { loadSessions as dbLoad, saveSession as dbSave, deleteSession as dbDelete, getUserCredits, redeemCode, getStoredPhone, storePhone, clearPhone } from './services/supabaseService';
 import Auth from './components/Auth';
+import Tutorial from './components/Tutorial';
 import Waveform from './components/Waveform';
 import type {
   CandidateProfile, AnswerRecord, AIEvaluation,
@@ -31,6 +32,7 @@ export default function App() {
   const [session, setSession] = useState<InterviewSession | null>(null);
   const [phone, setPhone] = useState(getStoredPhone);
   const [credits, setCredits] = useState<number | null>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
   const [showRedeem, setShowRedeem] = useState(false);
   const [redeemInput, setRedeemInput] = useState('');
   const [redeemMsg, setRedeemMsg] = useState('');
@@ -303,6 +305,15 @@ export default function App() {
       }}>
         {credits !== null && credits <= 0 ? '购买次数' : '＋ 开始新面试'}
       </button>
+
+      {/* 新手教程按钮 */}
+      <button onClick={() => setShowTutorial(true)}
+        style={{ display: 'block', margin: '8px auto 0', background: 'none', border: '1px solid #E0E1EE', color: '#888', fontSize: 13, borderRadius: 20, padding: '6px 18px', cursor: 'pointer' }}>
+        🎓 新手教程
+      </button>
+
+      {/* 新手教程弹窗 */}
+      {showTutorial && <Tutorial onFinish={() => setShowTutorial(false)} />}
 
       {/* 兑换码弹窗 */}
       {showRedeem && (

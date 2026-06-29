@@ -91,18 +91,21 @@ export async function generateReport(
   const scored = answers.filter(a => a.evaluation);
   const avgScore = scored.length ? scored.reduce((s, a) => s + (a.evaluation?.score || 0), 0) / scored.length : 0;
 
-  const summary = answers.map(a => {
+  const answeredList = answers.filter(a => !a.skipped && a.transcript);
+  const summaryText = answeredList.map(a => {
     const q = questions.find(q => q.id === a.questionId);
     if (!q) return '';
-    const sc = a.evaluation ? `评分${a.evaluation.score}/3` : a.skipped ? '跳过' : '未评估';
-    return `【${q.category}】${q.text}\n回答：${a.transcript || '未作答'} ${sc}\n亮点：${a.evaluation?.highlights.join('；') || '无'} 问题：${a.evaluation?.concerns.join('；') || '无'}`;
+    const sc = a.evaluation ? `评分${a.evaluation.score}/3` : '未评估';
+    return `[${a.questionId}]【${q.category}】${q.text}\n回答：${a.transcript} ${sc}`;
   }).filter(Boolean).join('\n\n');
+
+  const answerSummaryIds = answeredList.map(a => `"${a.questionId}":"一句话总结（30字内，客观描述她说了什么）"`).join(',\n    ');
 
   const system = `你是专业月嫂评估顾问，用口语化中文写评估报告。只输出JSON。`;
   const user = `候选人：${candidate.name}，${candidate.yearsOfExperience}年经验，带过${candidate.babiesHandled}个宝宝，最长${candidate.longestAssignment}个月。
 作答${answered}/${answers.length}题，平均分${avgScore.toFixed(1)}/3。
 
-${summary}
+${summaryText}
 
 请输出：{
   "authenticityScore":"high"|"medium"|"low",
@@ -113,7 +116,10 @@ ${summary}
   "recommendation":"强烈推荐"|"推荐"|"谨慎考虑"|"不推荐",
   "recommendationReason":"一句话30字以内",
   "dimensionNotes":{"工作经验核实":"分析","月嫂技能":"分析","儿童常见问题护理":"分析","先进育儿意识":"分析"},
-  "summary":"综合评价150字左右"
+  "summary":"综合评价150字左右",
+  "answerSummaries":{
+    ${answerSummaryIds}
+  }
 }`;
 
   const raw = await callLLM(system, user, 2048);

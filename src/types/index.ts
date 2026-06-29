@@ -55,6 +55,7 @@ export interface InterviewReport {
   recommendationReason: string;
   dimensionNotes: Record<Category, string>;
   summary: string;
+  answerSummaries: Record<string, string>; // questionId -> 一句话总结
 }
 
 export type InterviewPhase =

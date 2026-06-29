@@ -344,6 +344,7 @@ export default function App() {
             '先进育儿意识': '未测试，无法评估。',
           },
           summary: '王阿姨整体是中等水平的月嫂。基础护理技能掌握较好，特别是奶粉喂养方面说得有条理。但在儿童常见问题方面存在知识漏洞，关于肠胀气的回答暴露出对新生儿护理认知不够全面，需要在上户前特别沟通这块内容。建议录用前再追问几道护理类问题，重点考察她对黄疸、皮肤问题的处理经验。',
+          answerSummaries: {},
         };
         setReport(sampleReport);
         setSession({ id: 'tutorial_demo', candidate: { name: '示范·王阿姨', yearsOfExperience: 5, babiesHandled: 18, longestAssignment: 4 }, startedAt: new Date().toISOString(), answers: [], report: sampleReport });
@@ -674,14 +675,15 @@ export default function App() {
               </div>
             </div>
 
-            {/* 每题转录详情 */}
+            {/* 每题回答总结 */}
             <div className={styles.card} style={{ marginTop: 14 }}>
-              <p className={styles.cardTitle}>面试原话记录</p>
+              <p className={styles.cardTitle}>问答总结</p>
               {answers.filter(a => !a.skipped && a.transcript).map((a, i) => {
                 const qs = questions.find(q => q.id === a.questionId);
                 if (!qs) return null;
                 const scoreColor = a.evaluation ? ['', '#E05454', '#D4880A', '#2E9B6E'][a.evaluation.score] : '#aaa';
                 const scoreLabel = a.evaluation ? ['', '较差', '一般', '到位'][a.evaluation.score] : '';
+                const summaryText = report.answerSummaries?.[a.questionId] || a.transcript;
                 return (
                   <div key={a.questionId} style={{ paddingBottom: 16, marginBottom: 16, borderBottom: i < answers.filter(x => !x.skipped && x.transcript).length - 1 ? '1px solid #F0F1FA' : 'none' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
@@ -690,13 +692,8 @@ export default function App() {
                     </div>
                     <p style={{ fontSize: 13, color: '#444', marginBottom: 8, lineHeight: 1.5 }}>Q：{qs.text}</p>
                     <p style={{ fontSize: 14, color: '#1A1A2E', lineHeight: 1.7, background: '#F9FAFB', borderRadius: 8, padding: '8px 12px' }}>
-                      {a.transcript}
+                      {summaryText}
                     </p>
-                    {a.followUpTranscripts.length > 0 && a.followUpTranscripts.map((ft, fi) => (
-                      <p key={fi} style={{ fontSize: 13, color: '#666', lineHeight: 1.6, background: '#FFF8E6', borderRadius: 8, padding: '6px 12px', marginTop: 6 }}>
-                        追问回答：{ft}
-                      </p>
-                    ))}
                   </div>
                 );
               })}

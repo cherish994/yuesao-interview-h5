@@ -226,6 +226,9 @@
   margin: 0.2rem 0.24rem 0;
   padding: 0.24rem;
   min-height: 1.2rem;
+  max-height: 4rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .txLabel {
   display: flex;

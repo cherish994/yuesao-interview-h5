@@ -88,6 +88,13 @@ export default function App() {
     if (phone) refreshSessions();
   }, [phone]);
 
+  // 转录框自动滚到最新内容
+  useEffect(() => {
+    if (transcriptBoxRef.current) {
+      transcriptBoxRef.current.scrollTop = transcriptBoxRef.current.scrollHeight;
+    }
+  }, [transcript]);
+
   useEffect(() => {
     if (view !== 'interview') stopListening();
     // 教程：进入面试页自动开始第一题模拟
@@ -113,6 +120,7 @@ export default function App() {
   const [longest, setLongest] = useState('');
 
   const finalRef = useRef('');
+  const transcriptBoxRef = useRef<HTMLDivElement>(null);
   const [autoFollowUp, setAutoFollowUp] = useState<string | null>(null);
   const followUpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const qIdxRef = useRef(qIdx); // 用 ref 追踪当前题目，避免闭包问题
@@ -221,16 +229,16 @@ export default function App() {
     if (!isSupported()) { setErr('请用 Safari 或 Chrome 打开'); return; }
     const ok = await startListening(
       (text, isFinal) => {
+        // text 来自讯飞已是累计文字，直接赋值不追加
         if (isFinal) {
-          finalRef.current += text;
-          // 有新的完整句子，防抖 2 秒后触发追问分析
+          finalRef.current = text;
           if (followUpTimerRef.current) clearTimeout(followUpTimerRef.current);
           followUpTimerRef.current = setTimeout(async () => {
             const hint = await getRealtimeFollowUp(q.text, finalRef.current);
             setAutoFollowUp(hint);
           }, 2000);
         }
-        setTranscript((finalRef.current + text).slice(-200));
+        setTranscript(text);
       },
     );
     if (ok) setPhase('listening');
@@ -369,14 +377,14 @@ export default function App() {
       setPhase('listening');
       startListening((text, isFinal) => {
         if (isFinal) {
-          finalRef.current += text;
+          finalRef.current = text;
           if (followUpTimerRef.current) clearTimeout(followUpTimerRef.current);
           followUpTimerRef.current = setTimeout(async () => {
             const hint = await getRealtimeFollowUp(questions[qIdxRef.current].text, finalRef.current);
             setAutoFollowUp(hint);
           }, 2000);
         }
-        setTranscript((finalRef.current + text).slice(-200));
+        setTranscript(text);
       });
     }
   };
@@ -547,7 +555,7 @@ export default function App() {
         )}
       </div>
 
-      <div className={styles.transcriptBox}>
+      <div className={styles.transcriptBox} ref={transcriptBoxRef}>
         <div className={styles.txLabel}>
           <span className={styles.dot} style={{ background: phase === 'listening' ? '#E05454' : '#ddd' }} />
           {phase === 'listening' ? '正在听...' : '转录记录'}
